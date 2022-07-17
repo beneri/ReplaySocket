@@ -12,6 +12,10 @@ class ReplaySocket:
         # The index tracks how many bytes we have already returned
         self.string_buffer_index = 0
 
+        # For some polling methods a socket.timeout is the correct
+        # action for an empty response
+        self.timeout_on_empty = False
+
         packets = rdpcap(pcap_file)
         self.socket_start_time = packets[0].time
         self.socket_last_time = packets[-1].time
@@ -60,6 +64,8 @@ class ReplaySocket:
         # Ensure we do not add more data than specified by recv()
         if self.string_buffer_index+size > len(self.string_buffer):
             size = len(self.string_buffer) - self.string_buffer_index
+            if self.timeout_on_empty and size < 1:
+                raise socket.timeout
 
         # Extract the <size> bytes from the buffer
         data_start = self.string_buffer_index
